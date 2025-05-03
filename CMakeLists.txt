@@ -1,14 +1,10 @@
-﻿# CMakeList.txt : Top-level CMake project file, do global configuration
-# and include sub-projects here.
-#
-cmake_minimum_required (VERSION 3.8)
+﻿cmake_minimum_required(VERSION 3.14)
+project( LANGUAGES CXX)
 
-# Enable Hot Reload for MSVC compilers if supported.
-if (POLICY CMP0141)
-  cmake_policy(SET CMP0141 NEW)
-  set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
-endif()
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Fetch GLFW
 include(FetchContent)
 FetchContent_Declare(
   glfw
@@ -25,7 +21,34 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glad)
 
-project ("OpenGL-template")
+# Fetch GLM (header-only math library)
+FetchContent_Declare(
+  glm
+  GIT_REPOSITORY https://github.com/g-truc/glm.git
+  GIT_TAG 0.9.9.8
+)
+FetchContent_MakeAvailable(glm)
 
-# Include sub-projects.
-add_subdirectory ("OpenGL-template")
+add_executable(OpenGL-template src/main.cpp)
+
+target_include_directories(OpenGL-template PRIVATE 
+  ${glad_SOURCE_DIR}/include
+  ${glfw_SOURCE_DIR}/include
+  ${glm_SOURCE_DIR}
+)
+
+target_link_libraries(OpenGL-template PRIVATE glfw)
+
+if (APPLE)
+  target_link_libraries(OpenGL-template PRIVATE "-framework OpenGL")
+elseif (WIN32)
+  target_link_libraries(OpenGL-template PRIVATE opengl32)
+else()
+  target_link_libraries(OpenGL-template PRIVATE GL)
+endif()
+
+# Copy shaders into the build directory
+add_custom_command(TARGET OpenGL-template POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+  ${CMAKE_SOURCE_DIR}/shaders $<TARGET_FILE_DIR:OpenGL-template>/shaders
+)
